@@ -17,6 +17,7 @@ class Login(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user: dict
 
 class TokenData(BaseModel):
     sub: Optional[str] = None

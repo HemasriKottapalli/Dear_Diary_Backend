@@ -6,6 +6,8 @@ from utilities import get_db, get_current_user
 from schemas.diary import DiaryCreate, DiaryOut, DiaryUpdate
 from models.diary import DiaryEntry
 from models.user import User
+from ai.diary_indexing import index_diary_entry
+
 
 router = APIRouter(prefix="/diary", tags=["diary"])
 
@@ -14,11 +16,17 @@ def create_entry(payload: DiaryCreate, db: Session = Depends(get_db), current_us
     entry = DiaryEntry(
         owner_id=current_user.id,
         title=payload.title,
-        content=payload.content
+        content=payload.content,
+        mood=payload.mood  # ADD THIS LINE
     )
     db.add(entry)
     db.commit()
     db.refresh(entry)
+
+    # diary indexing
+    index_diary_entry(db, entry, current_user.id)
+    db.commit()
+
     return entry
 
 @router.get("/", response_model=List[DiaryOut])
@@ -59,10 +67,20 @@ def update_entry(entry_id: int, payload: DiaryUpdate, db: Session = Depends(get_
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
 
+    # Track if we need to re-index
+    needs_reindex = False
+
     if payload.title is not None:
         entry.title = payload.title
     if payload.content is not None:
         entry.content = payload.content
+        needs_reindex = True  # Re-index if content changes
+    if payload.mood is not None:  # ADD THIS BLOCK
+        entry.mood = payload.mood
+
+    # Only re-index if content changed
+    if needs_reindex:
+        index_diary_entry(db, entry, current_user.id)
 
     db.add(entry)
     db.commit()
