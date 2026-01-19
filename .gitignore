@@ -1,8 +1,5 @@
 __pycache__/
 *.pyc
-<<<<<<< HEAD
-=======
 myenv/
 .env
 .vscode/
->>>>>>> 4a21664 (updated server commit)
